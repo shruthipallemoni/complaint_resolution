@@ -3,17 +3,19 @@ from crewai import Crew, Process
 from crewai.flow.flow import Flow, start, listen, router
 from pydantic import BaseModel
 from typing import Optional, List
+from .persistance.review_repo import save_pending_review
 
 from .crew import ComplaintResolution
 from .models import (
     ComplaintClassification, CustomerHistory, RiskAssessment,
-    ResolutionDraft, GuardrailResult, AuditLogEntry
+    ResolutionDraft, GuardrailResult, AuditLogEntry, ComplaintState
 )
 from .services.risk_scoring import calculate_risk_score
 from .services.audit import build_audit_log
 from .services.resilience import run_with_retries, CrewExecutionError
 from .persistance.db import init_db, get_connection
 from .persistance.customer_repo import get_customer_history, update_customer_history
+from .persistance.audit_repo import init_audit_table, save_audit_entry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,24 +23,20 @@ logger = logging.getLogger(__name__)
 MAX_REWORK_ATTEMPTS = 2
 
 
-class ComplaintState(BaseModel):
-    customer_id: str = ""
-    complaint_text: str = ""
-    classification: Optional[ComplaintClassification] = None
-    history: Optional[CustomerHistory] = None
-    risk_assessment: Optional[RiskAssessment] = None
-    current_draft: Optional[ResolutionDraft] = None
-    draft_attempts: List[ResolutionDraft] = []
-    guardrail_results: List[GuardrailResult] = []
-    rework_count: int = 0
-    human_decision: Optional[str] = None
-    final_reply: str = ""
-    guardrail_exhausted: bool = False
-
-
 class ComplaintFlow(Flow[ComplaintState]):
 
     # ---------- Flow-level steps (coarse branching only) ----------
+    
+    def __init__(self, interactive: bool = True, **kwargs):
+        super().__init__(**kwargs)
+        self.interactive = interactive
+
+    def kickoff(self, inputs=None, **kwargs):
+        inputs = inputs or {}
+        self.state.customer_id = inputs.get("customer_id", "")
+        self.state.customer_email = inputs.get("customer_email", "")
+        self.state.complaint_text = inputs.get("complaint_text", "")
+        return super().kickoff(inputs=inputs, **kwargs)
 
     @start()
     def classify_complaint(self):
@@ -95,8 +93,7 @@ class ComplaintFlow(Flow[ComplaintState]):
         self.state.final_reply = self.state.current_draft.draft_reply
         return self._log_and_finish()
 
-    @listen("needs_human_review")
-    def human_review(self):
+    def _human_review_cli(self):
         while True:
             print("\n--- HUMAN REVIEW REQUIRED ---")
             if self.state.guardrail_exhausted:
@@ -200,6 +197,8 @@ class ComplaintFlow(Flow[ComplaintState]):
             final_reply=self.state.final_reply,
         )
         print(f"\n--- AUDIT LOG ---\n{entry.model_dump_json(indent=2)}")
+        init_audit_table()
+        save_audit_entry(entry.model_dump(mode="json"))
 
         was_escalated = self.state.risk_assessment.requires_escalation if self.state.risk_assessment else False
         category = self.state.classification.category if self.state.classification else "unknown"
@@ -208,3 +207,13 @@ class ComplaintFlow(Flow[ComplaintState]):
         print("[FLOW] ✓ Complaint resolution complete and database updated!")
 
         return entry
+    
+    @listen("needs_human_review")
+    def human_review(self):
+        if self.interactive:
+            return self._human_review_cli()
+        else:
+            from .persistance.review_repo import save_pending_review
+            review_id = save_pending_review(self.state.model_dump(mode="json"))
+            print(f"\n[FLOW] Paused for human review. review_id={review_id}")
+            return {"status": "pending_review", "review_id": review_id}

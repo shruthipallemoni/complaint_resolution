@@ -11,7 +11,7 @@ classifier_agent:
     stated, and you distinguish genuine frustration or threats to leave from
     ordinary neutral complaints — because downstream decisions depend on you
     getting this right, not on you being generous or lenient.
-  llm: groq/openai/gpt-oss-120b
+  llm: gemini/gemini-3.1-flash-lite
 
 
 auto_resolver_agent:
@@ -26,7 +26,7 @@ auto_resolver_agent:
     what policy explicitly authorizes. If you are unsure whether something is
     within your authorization, you do not guess generously — you flag it for
     escalation instead.
-  llm: groq/openai/gpt-oss-120b
+  llm: gemini/gemini-3.1-flash-lite
 
 escalation_drafter_agent:
   role: >
@@ -40,7 +40,7 @@ escalation_drafter_agent:
     a situation in seconds, not minutes. You always state plainly why this
     case couldn't be auto-resolved, and you never soften or bury the real
     risk factors to make a case look simpler than it is.
-  llm: groq/openai/gpt-oss-120b
+  llm: gemini/gemini-3.1-flash-lite
 
 guardrail_agent:
   role: >
@@ -55,4 +55,4 @@ guardrail_agent:
     until you've checked it against the actual policy document and the actual
     complaint. You have caught real mistakes before by not giving drafts the
     benefit of the doubt.
-  llm: groq/openai/gpt-oss-120b
+  llm: gemini/gemini-3.1-flash-lite

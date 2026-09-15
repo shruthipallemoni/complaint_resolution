@@ -46,7 +46,13 @@ def run_with_retries(kickoff_fn: Callable[[], T], step_name: str) -> T:
         except Exception as e:
             error_str = str(e).lower()
             is_rate_limit = "rate_limit" in error_str or "ratelimiterror" in error_str
-            is_transient = is_rate_limit or "timeout" in error_str or "connection" in error_str
+            is_service_unavailable = "503" in error_str or "unavailable" in error_str
+            is_transient = (
+                is_rate_limit
+                or is_service_unavailable
+                or "timeout" in error_str
+                or "connection" in error_str
+            )
 
             logger.error(f"[{step_name}] Attempt {attempt} failed: {e}")
             last_error = e

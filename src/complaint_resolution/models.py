@@ -3,6 +3,23 @@ from typing import List, Optional
 from datetime import datetime
 
 
+class ComplaintState(BaseModel):
+    customer_id: str = ""
+    customer_email: str = ""
+    complaint_text: str = ""
+    human_reject_count: int = 0
+    classification: Optional["ComplaintClassification"] = None
+    history: Optional["CustomerHistory"] = None
+    risk_assessment: Optional["RiskAssessment"] = None
+    current_draft: Optional["ResolutionDraft"] = None
+    draft_attempts: List["ResolutionDraft"] = Field(default_factory=list)
+    guardrail_results: List["GuardrailResult"] = Field(default_factory=list)
+    rework_count: int = 0
+    human_decision: Optional[str] = None
+    final_reply: str = ""
+    guardrail_exhausted: bool = False
+
+
 class ComplaintClassification(BaseModel):
     category: str = Field(description="Complaint category, e.g. 'shipping', 'billing', 'product_defect'")
     financial_impact: Optional[float] = Field(description="Dollar amount involved, if any was mentioned. Null if none.")
@@ -49,3 +66,6 @@ class AuditLogEntry(BaseModel):
     guardrail_results: List[GuardrailResult]
     human_decision: Optional[str] = None  # "approved", "edited", "rejected", or None if auto-resolved
     final_reply: str
+
+
+ComplaintState.model_rebuild()
