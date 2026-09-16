@@ -16,4 +16,4 @@ COPY knowledge ./knowledge
 
 EXPOSE 8000
 
-CMD ["uv", "run", "uvicorn", "complaint_resolution.api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["sh", "-c", "uv run uvicorn complaint_resolution.api:app --host 0.0.0.0 --port ${PORT:-8000}"]

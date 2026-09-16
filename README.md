@@ -72,13 +72,14 @@ The service creates its tables on startup.
 ### Deploying the backend on Render
 
 Create a Render Web Service from `backend/` using the existing Dockerfile. In
-the service's Environment settings, add `DATABASE_URL` with the Internal
-Database URL from your Render PostgreSQL instance. Keep the complete URL,
+the service's Environment settings, replace any existing `DATABASE_URL` value
+with the Internal Database URL from your Render PostgreSQL instance. It must
+not contain `localhost`, `127.0.0.1`, or port `55432`. Keep the complete URL,
 including its username, password, host, and database name. Do not commit that
 value to `.env` or source control.
 
 Also add the model-provider keys required by your selected CrewAI provider,
-then use port `8000` (or Render's `$PORT` if you change the Docker command).
+then redeploy. The Docker command uses Render's `$PORT` automatically.
 Render services in the same region can use the database's Internal URL; use
 the External URL only when the application runs outside Render's private
 network.
