@@ -109,6 +109,12 @@ uv run pytest tests/ -v
 The React application lives in `frontend/` and is managed independently with
 its own Node.js dependencies and server.
 
+The deployed backend is available at
+https://complaint-resolution.onrender.com, with interactive API documentation
+at https://complaint-resolution.onrender.com/docs. The frontend defaults to
+this backend URL; set `VITE_API_URL` in `frontend/.env.local` when running
+against a local backend.
+
 ## Evaluation results
 
 Run against a fixed set of 10 hand-written complaints spanning shipping,
