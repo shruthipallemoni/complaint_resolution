@@ -1,4 +1,18 @@
 services:
+  api:
+    build: .
+    container_name: complaint-resolution-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://complaint_app:complaint_dev_password@postgres:5432/complaint_resolution
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   postgres:
     image: postgres:16-alpine
     container_name: complaint-resolution-postgres
