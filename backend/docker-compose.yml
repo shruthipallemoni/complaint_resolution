@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: complaint-resolution-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: complaint_resolution
+      POSTGRES_USER: complaint_app
+      POSTGRES_PASSWORD: complaint_dev_password
+    ports:
+      - "55432:5432"
+    volumes:
+      - complaint_resolution_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U complaint_app -d complaint_resolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  complaint_resolution_postgres_data:
