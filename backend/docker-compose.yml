@@ -6,7 +6,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://complaint_app:complaint_dev_password@postgres:5432/complaint_resolution
+      DATABASE_URL: ${DATABASE_URL:-postgresql://complaint_app:complaint_dev_password@postgres:5432/complaint_resolution}
     ports:
       - "8000:8000"
     depends_on:

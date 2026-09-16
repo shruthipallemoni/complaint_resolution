@@ -41,9 +41,8 @@ over $50, a recurring issue, an emotional-escalation signal).
 - **CrewAI Flow** — chosen over a plain sequential Crew specifically because
   this problem needs conditional branching (auto-resolve vs. escalate),
   which a sequential Crew can't express.
-- **SQLite** — real, durable customer-history persistence without standing up
-  a separate database service; a deliberate scope choice for a single-project
-  deployment, not a concurrency-safe production store.
+- **PostgreSQL** — durable, concurrent persistence for customer history,
+  pending reviews, and audit records in deployment environments.
 - **Gemini / Groq (via LiteLLM)** — switched between providers during
   development after hitting Groq's free-tier rate limits (8,000 TPM) on a
   multi-agent sequential pipeline; retry-with-backoff plus provider choice
@@ -54,10 +53,47 @@ over $50, a recurring issue, an emotional-escalation signal).
 ```bash
 git clone <repo>
 cd complaint_resolution
+cd backend
 uv sync
-cp .env.example .env   # add your GROQ_API_KEY / GEMINI_API_KEY / etc.
+cp .env.example .env   # add your model keys and DATABASE_URL
 uv run crewai run
 ```
+
+Start the API locally from `backend/` with:
+
+```bash
+uv run uvicorn complaint_resolution.api:app --reload --port 8000
+```
+
+Set `DATABASE_URL` to the PostgreSQL connection string supplied by your host,
+for example `postgresql://user:password@host:5432/complaint_resolution`.
+The service creates its tables on startup.
+
+### Deploying the backend on Render
+
+Create a Render Web Service from `backend/` using the existing Dockerfile. In
+the service's Environment settings, add `DATABASE_URL` with the Internal
+Database URL from your Render PostgreSQL instance. Keep the complete URL,
+including its username, password, host, and database name. Do not commit that
+value to `.env` or source control.
+
+Also add the model-provider keys required by your selected CrewAI provider,
+then use port `8000` (or Render's `$PORT` if you change the Docker command).
+Render services in the same region can use the database's Internal URL; use
+the External URL only when the application runs outside Render's private
+network.
+
+For local development, start PostgreSQL from `backend/` with:
+
+```bash
+docker compose up -d
+```
+
+The local container is exposed on host port `55432` because port `5432` is
+already used by another Docker service on this machine.
+
+Stop the container with `docker compose down`. Add `-v` only when you want to
+delete the local PostgreSQL data volume.
 
 Run the evaluation suite:
 ```bash
@@ -68,6 +104,9 @@ Run tests:
 ```bash
 uv run pytest tests/ -v
 ```
+
+The React application lives in `frontend/` and is managed independently with
+its own Node.js dependencies and server.
 
 ## Evaluation results
 
@@ -106,10 +145,9 @@ credited unless it's also reflected in stored history. See Known Limitations.
   this writing); retry-with-backoff on the primary provider is implemented,
   but cross-provider fallback was scoped out to avoid a hand-rolled
   workaround with more surface area for bugs.
-- **SQLite persistence is not concurrency-safe** — a read-modify-write
-  pattern that would race under simultaneous complaints for the same
-  customer. Fine for this project's scale; a production system would use
-  atomic increments or transactions.
+- **Customer history updates use a read-modify-write sequence** — concurrent
+  complaints for the same customer can still require an atomic update strategy
+  if the deployment handles high write contention.
 
 ## Future improvements
 
